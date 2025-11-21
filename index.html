@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Deadlock Visualizer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    select, input[type="range"], input[type="number"] {
+      padding: 10px 12px;
+      background: #111730;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-size: 14px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #1a202c;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
+
+    .btn.danger {
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+
+    .btn.danger:hover {
+      background: #dc2626;
+    }
+
+    .btn.secondary {
+      background: #06b6d4;
+      border-color: #06b6d4;
+    }
+
+    .btn.secondary:hover {
+      background: #0891b2;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(17, 23, 48, 0.5);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      padding: 30px;
+      background: rgba(59, 130, 246, 0.05);
+      border-radius: 8px;
+      border: 1px solid #334155;
+      margin-bottom: 20px;
+      min-height: 200px;
+    }
+
+    .process {
+      width: 100%;
+      min-height: 120px;
+      border: 2px solid #334155;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #111730;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .process.waiting {
+      border-color: #f59e0b;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+    }
+
+    .process.deadlock {
+      border-color: #ef4444;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .process-name {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .process-state {
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+
+    .resources-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .resource {
+      min-height: 100px;
+      border: 2px solid #334155;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: #111730;
+      font-size: 12px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .resource.acquired {
+      border-color: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+
+    .resource-owner {
+      font-size: 10px;
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    .log {
+      margin-top: 20px;
+    }
+
+    .log-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    #logContainer {
+      height: 250px;
+      overflow-y: auto;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      background: #0a0e27;
+      border-radius: 6px;
+      padding: 12px;
+      border: 1px solid #334155;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      color: #cbd5e1;
+    }
+
+    .log-entry.error {
+      color: #ef4444;
+    }
+
+    .log-entry.success {
+      color: #10b981;
+    }
+
+    .log-entry.warning {
+      color: #f59e0b;
+    }
+
+    .stats {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      color: #06b6d4;
+    }
+
+    .config-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(59, 130, 246, 0.05);
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+
+    .config-section label {
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.6); }
+    }
+
+    @media (max-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Deadlock Visualizer - Dinámico</h1>
+    </div>
+
+    <div class="controls">
+      <!-- Added banker's algorithm option -->
+      <select id="strategy">
+        <option value="fifo">FIFO</option>
+        <option value="banker">Algoritmo del Banquero</option>
+        <option value="ordering">Prevención</option>
+        <option value="preempt">Preempt</option>
+        <option value="abort">Abort</option>
+      </select>
+
+      <label style="display: flex; align-items: center; gap: 8px;">
+        Velocidad:
+        <input id="speed" type="range" min="0.3" max="2.5" step="0.1" value="1">
+        <span id="speedVal">1.0x</span>
+      </label>
+
+      <!-- Added dynamic process/resource controls -->
+      <label style="display: flex; align-items: center; gap: 8px;">
+        Procesos:
+        <input id="numProcesses" type="number" min="2" max="6" value="2" style="width: 50px;">
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 8px;">
+        Recursos:
+        <input id="numResources" type="number" min="2" max="5" value="2" style="width: 50px;">
+      </label>
+
+      <select id="scenario">
+        <option value="random">Aleatorio</option>
+        <option value="deadlock-prone">Propenso a Deadlock</option>
+        <option value="safe">Seguro</option>
+        <option value="race">Carrera Libre</option>
+      </select>
+
+      <label style="display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="autoDetect" checked>
+        Detección Automática
+      </label>
+
+      <button id="start" class="btn">▶ Iniciar</button>
+      <button id="stop" class="btn danger">⏹ Detener</button>
+      <button id="detect" class="btn">🔎 Detectar</button>
+      <button id="resolve" class="btn secondary">⚙ Resolver</button>
+      <button id="runScenario" class="btn secondary">🎬 Demo</button>
+      <button id="clearLog" class="btn">Limpiar</button>
+    </div>
+
+    <div class="main-grid">
+      <div>
+        <div class="panel">
+          <!-- Dynamic diagram that adjusts to number of processes/resources -->
+          <div id="processesContainer" class="diagram"></div>
+          <div id="resourcesPanel" class="resources-panel"></div>
+
+          <div class="log">
+            <div class="log-title">Log de Eventos</div>
+            <div id="logContainer"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #cbd5e1; margin-bottom: 16px;">Configuración</div>
+        
+        <div class="config-section">
+          <div style="font-size: 11px; color: #cbd5e1;">Algoritmo activo: <strong id="algorithmName">FIFO</strong></div>
+          <div style="font-size: 11px; color: #cbd5e1;">Procesos: <strong id="processCount">2</strong> | Recursos: <strong id="resourceCount">2</strong></div>
+        </div>
+
+        <!-- Added panel of help about algorithms -->
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #cbd5e1; margin-bottom: 16px; margin-top: 20px;">Sobre los Algoritmos</div>
+        <div style="font-size: 11px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
+          <strong>FIFO:</strong> Respeta orden de llegada (preventivo)<br/>
+          <strong>Banquero:</strong> Verifica estado seguro antes de asignar<br/>
+          <strong>Prevención:</strong> Libera recursos para restablecer orden<br/>
+          <strong>Preempt:</strong> Expulsa proceso que más tiempo lleva<br/>
+          <strong>Abort:</strong> Termina proceso con menos recursos
+        </div>
+
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #cbd5e1; margin-bottom: 16px;">Estadísticas</div>
+        <div class="stats">
+          <div class="stat">
+            <span>Deadlocks</span>
+            <span class="stat-value" id="deadlockCount">0</span>
+          </div>
+          <div class="stat">
+            <span>Resoluciones</span>
+            <span class="stat-value" id="resolutionCount">0</span>
+          </div>
+          <div class="stat">
+            <span>Tiempo Medio (ms)</span>
+            <span class="stat-value" id="avgTime">0</span>
+          </div>
+          <div class="stat">
+            <span>Estado</span>
+            <span class="stat-value" id="status">Detenido</span>
+          </div>
+        </div>
+
+        <!-- Added panel of information about when deadlocks occur -->
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #cbd5e1; margin-bottom: 16px; margin-top: 20px;">Cuándo Ocurren Deadlocks</div>
+        <div style="font-size: 11px; color: #cbd5e1; line-height: 1.6;">
+          <strong>✓ Probabilidad ALTA:</strong> Recursos ≤ Procesos/2<br/>
+          Ejemplo: 3 procesos, 1-2 recursos<br/>
+          <br/>
+          <strong>✗ Probabilidad BAJA:</strong> Recursos > Procesos<br/>
+          Ejemplo: 3 procesos, 4+ recursos
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
