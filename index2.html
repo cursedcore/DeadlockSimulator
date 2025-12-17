@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Pago - CyberSource</title>
+    <script src="https://flex.cybersource.com/microform/bundle/v2/flex-microform.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .payment-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .payment-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .payment-header h1 {
+            color: #1a202c;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .payment-header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2d3748;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .card-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            color: white;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-chip {
+            width: 50px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .card-number {
+            font-size: 22px;
+            letter-spacing: 3px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .card-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .card-holder {
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .card-expiry {
+            font-size: 14px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 24px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .secure-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 16px;
+            color: #718096;
+            font-size: 12px;
+        }
+
+        .secure-badge svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .input-error {
+            border-color: #e53e3e !important;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            background: #48bb78;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-container {
+                padding: 24px;
+            }
+
+            .card-number {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <div class="payment-header">
+            <h1>Pago Seguro</h1>
+            <p>Procesa tu pago con CyberSource</p>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✓ Pago procesado exitosamente
+        </div>
+
+        <div class="card-display">
+            <div class="card-chip"></div>
+            <div class="card-number" id="displayCardNumber">**** **** **** ****</div>
+            <div class="card-details">
+                <div class="card-holder">
+                    <div style="font-size: 10px; opacity: 0.8; margin-bottom: 4px;">TITULAR</div>
+                    <div id="displayCardHolder">NOMBRE APELLIDO</div>
+                </div>
+                <div class="card-expiry">
+                    <div style="font-size: 10px; opacity: 0.8; margin-bottom: 4px;">VENCE</div>
+                    <div id="displayExpiry">MM/AA</div>
+                </div>
+            </div>
+        </div>
+
+        <form id="paymentForm">
+            <!-- Solo campos necesarios para CyberSource -->
+            <div class="form-group">
+                <label for="number-container">Número de Tarjeta *</label>
+                <div id="number-container" style="height: 48px; border: 2px solid #e2e8f0; border-radius: 8px; padding: 0;"></div>
+                <div class="error-message" id="cardNumberError">Número de tarjeta inválido</div>
+            </div>
+
+            <div class="form-group">
+                <label for="cardHolder">Nombre del Titular *</label>
+                <input 
+                    type="text" 
+                    id="cardHolder" 
+                    name="cardHolder"
+                    placeholder="Como aparece en la tarjeta"
+                    required
+                >
+                <div class="error-message" id="cardHolderError">Nombre requerido</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="expirationMonth-container">Fecha de Expiración *</label>
+                    <div style="display: flex; gap: 8px;">
+                        <div id="expirationMonth-container" style="flex: 1; height: 48px; border: 2px solid #e2e8f0; border-radius: 8px;"></div>
+                        <div id="expirationYear-container" style="flex: 1; height: 48px; border: 2px solid #e2e8f0; border-radius: 8px;"></div>
+                    </div>
+                    <div class="error-message" id="expiryError">Fecha inválida</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="securityCode-container">CVV *</label>
+                    <div id="securityCode-container" style="height: 48px; border: 2px solid #e2e8f0; border-radius: 8px;"></div>
+                    <div class="error-message" id="cvvError">CVV inválido</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="amount">Monto *</label>
+                    <input 
+                        type="text" 
+                        id="amount" 
+                        name="amount"
+                        placeholder="100.00"
+                        required
+                    >
+                    <div class="error-message" id="amountError">Monto inválido</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="currency">Moneda *</label>
+                    <select id="currency" name="currency" required>
+                        <option value="USD">USD</option>
+                        <option value="HNL">HNL</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                Procesar Pago
+            </button>
+
+            <div class="secure-badge">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                </svg>
+                Pago seguro encriptado
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let microformInstance;
+        let cardToken = null;
+
+        const API_BASE_URL = 'http://localhost:3000/api';
+
+        async function initializeFlex() {
+            try {
+                console.log('[v0] Solicitando capture context del backend...');
+                
+                const response = await fetch(`${API_BASE_URL}/generate-capture-context`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al obtener el capture context');
+                }
+
+                const data = await response.json();
+                const captureContext = data.captureContext;
+
+                console.log('[v0] Capture context recibido, inicializando Flex Microform...');
+
+                const flex = new Flex(captureContext);
+                
+                microformInstance = flex.microform({
+                    styles: {
+                        'input': {
+                            'font-size': '16px',
+                            'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            'color': '#1a202c',
+                            'padding': '12px 16px'
+                        },
+                        ':focus': { 'color': '#667eea' },
+                        ':disabled': { 'cursor': 'not-allowed' },
+                        'valid': { 'color': '#48bb78' },
+                        'invalid': { 'color': '#e53e3e' }
+                    }
+                });
+
+                const cardNumber = microformInstance.createField('number', { 
+                    placeholder: '1234 5678 9012 3456' 
+                });
+                
+                const expirationMonth = microformInstance.createField('expirationMonth', { 
+                    placeholder: 'MM' 
+                });
+                
+                const expirationYear = microformInstance.createField('expirationYear', { 
+                    placeholder: 'AA' 
+                });
+                
+                const securityCode = microformInstance.createField('securityCode', { 
+                    placeholder: '123' 
+                });
+
+                cardNumber.load('#number-container');
+                expirationMonth.load('#expirationMonth-container');
+                expirationYear.load('#expirationYear-container');
+                securityCode.load('#securityCode-container');
+
+                console.log('[v0] Flex Microform inicializado correctamente');
+
+                cardNumber.on('change', function(data) {
+                    if (data.card && data.card.length > 0) {
+                        const maskedNumber = data.card[0].name ? 
+                            '**** **** **** ' + data.card[0].name.slice(-4) : 
+                            '**** **** **** ****';
+                        document.getElementById('displayCardNumber').textContent = maskedNumber;
+                    }
+                });
+
+            } catch (error) {
+                console.error('[v0] Error al inicializar Flex:', error);
+                alert('Error al inicializar el formulario de pago. Por favor, verifica que el backend esté corriendo.');
+            }
+        }
+
+        initializeFlex();
+
+        const cardHolderInput = document.getElementById('cardHolder');
+        const displayCardHolder = document.getElementById('displayCardHolder');
+
+        cardHolderInput.addEventListener('input', function(e) {
+            const value = e.target.value.toUpperCase();
+            displayCardHolder.textContent = value || 'NOMBRE APELLIDO';
+        });
+
+        const amountInput = document.getElementById('amount');
+        amountInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^\d.]/g, '');
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            if (parts[1] && parts[1].length > 2) {
+                value = parts[0] + '.' + parts[1].slice(0, 2);
+            }
+            e.target.value = value;
+        });
+
+        const form = document.getElementById('paymentForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const successMessage = document.getElementById('successMessage');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('input, #number-container, #securityCode-container, #expirationMonth-container, #expirationYear-container')
+                .forEach(el => el.style.borderColor = '#e2e8f0');
+            
+            let isValid = true;
+
+            if (cardHolderInput.value.trim().length < 3) {
+                showError('cardHolder', 'cardHolderError');
+                isValid = false;
+            }
+
+            const email = document.getElementById('email').value;
+            if (!validateEmail(email)) {
+                showError('email', 'emailError');
+                isValid = false;
+            }
+
+            const amount = parseFloat(amountInput.value);
+            if (isNaN(amount) || amount <= 0) {
+                showError('amount', 'amountError');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Procesando...';
+
+            try {
+                console.log('[v0] Creando token con CyberSource...');
+                
+                const options = {
+                    expirationMonth: microformInstance.fields.expirationMonth,
+                    expirationYear: microformInstance.fields.expirationYear
+                };
+
+                microformInstance.createToken(options, async function(err, token) {
+                    if (err) {
+                        console.error('[v0] Error al crear token:', err);
+                        alert('Error al procesar la tarjeta: ' + err.message);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Procesar Pago';
+                        return;
+                    }
+
+                    console.log('[v0] Token creado exitosamente:', token);
+
+                    try {
+                        const paymentData = {
+                            token: token,
+                            cardholderName: cardHolderInput.value,
+                            email: email,
+                            amount: amount.toFixed(2),
+                            currency: document.getElementById('currency').value
+                        };
+
+                        console.log('[v0] Enviando pago al backend:', paymentData);
+
+                        const paymentResponse = await fetch(`${API_BASE_URL}/process-payment`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(paymentData)
+                        });
+
+                        const result = await paymentResponse.json();
+
+                        if (paymentResponse.ok && result.success) {
+                            console.log('[v0] Pago exitoso:', result);
+                            successMessage.textContent = `✓ Pago procesado exitosamente - ID: ${result.transactionId}`;
+                            successMessage.classList.add('show');
+                            
+                            form.reset();
+                            document.getElementById('displayCardNumber').textContent = '**** **** **** ****';
+                            document.getElementById('displayCardHolder').textContent = 'NOMBRE APELLIDO';
+                            
+                            setTimeout(() => {
+                                successMessage.classList.remove('show');
+                            }, 5000);
+                        } else {
+                            throw new Error(result.message || 'Error al procesar el pago');
+                        }
+                    } catch (error) {
+                        console.error('[v0] Error al procesar pago:', error);
+                        alert('Error al procesar el pago: ' + error.message);
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Procesar Pago';
+                    }
+                });
+
+            } catch (error) {
+                console.error('[v0] Error:', error);
+                alert('Error al procesar el pago: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Procesar Pago';
+            }
+        });
+
+        function showError(inputId, errorId) {
+            const element = document.getElementById(inputId);
+            if (element) {
+                element.style.borderColor = '#e53e3e';
+            }
+            document.getElementById(errorId).classList.add('show');
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+    </script>
+</body>
+</html>
